@@ -49,5 +49,29 @@ class TestHTMLNode(unittest.TestCase):
                 "HTMLNode(tag:p, value:What a strange world, children:None, props:{'class': 'primary'})",
                 )
 
+    def test_props_to_html_none(self):
+        node = HTMLNode("p", "text")
+        self.assertEqual(node.props_to_html(), "")
+
+    def test_props_to_html_empty_dict(self):
+        node = HTMLNode("p", "text", props={})
+        self.assertEqual(node.props_to_html(), "")
+
+    def test_props_to_html_single(self):
+        node = HTMLNode("a", "link", props={"href": "https://boot.dev"})
+        self.assertEqual(node.props_to_html(), ' href="https://boot.dev"')
+
+    def test_to_html_not_implemented(self):
+        node = HTMLNode("p", "text")
+        with self.assertRaises(NotImplementedError):
+            node.to_html()
+
+    def test_all_defaults_none(self):
+        node = HTMLNode()
+        self.assertIsNone(node.tag)
+        self.assertIsNone(node.value)
+        self.assertIsNone(node.children)
+        self.assertIsNone(node.props)
+
 if __name__=="__main__":
     unittest.main()
