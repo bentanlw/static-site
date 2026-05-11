@@ -101,3 +101,14 @@ def text_to_textnodes(text):
     new_nodes = split_nodes_delimiter(new_nodes, "**", TextType.BOLD)
     new_nodes = split_nodes_delimiter(new_nodes, "_", TextType.ITALIC)
     return new_nodes
+
+def markdown_to_blocks(markdown):
+    blocks = []
+    for block in markdown.split("\n\n"):
+        if block == "":
+            continue
+        else:
+            blocks.append(block.strip())
+    return blocks
+
+

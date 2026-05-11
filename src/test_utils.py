@@ -1,7 +1,7 @@
 import unittest
 
 from textnode import TextNode, TextType
-from utils import extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_link, text_node_to_html_node, split_nodes_delimiter, text_to_textnodes
+from utils import extract_markdown_images, extract_markdown_links, markdown_to_blocks, split_nodes_image, split_nodes_link, text_node_to_html_node, split_nodes_delimiter, text_to_textnodes
 
 class TestTextNodeToHtmlNode(unittest.TestCase):
     def test_text(self):
@@ -322,6 +322,52 @@ class TestTextToTextNodes(unittest.TestCase):
             TextNode(" and ", TextType.TEXT),
             TextNode("link", TextType.LINK, "https://boot.dev"),
         ], new_nodes)
+
+class TestMarkdownToBlocks(unittest.TestCase):
+    def test_markdown_to_blocks(self):
+        md = """
+This is **bolded** paragraph
+
+This is another paragraph with _italic_ text and `code` here
+This is the same paragraph on a new line
+
+- This is a list
+- with items
+"""
+        blocks = markdown_to_blocks(md)
+        self.assertEqual(
+                blocks,
+                [
+                    "This is **bolded** paragraph",
+                    "This is another paragraph with _italic_ text and `code` here\nThis is the same paragraph on a new line",
+                    "- This is a list\n- with items",
+                ],
+            )
+
+    def test_single_block(self):
+        blocks = markdown_to_blocks("just one paragraph")
+        self.assertEqual(blocks, ["just one paragraph"])
+
+    def test_strips_leading_trailing_whitespace(self):
+        blocks = markdown_to_blocks("  leading spaces  \n\n  trailing spaces  ")
+        self.assertEqual(blocks, ["leading spaces", "trailing spaces"])
+
+    def test_empty_string(self):
+        blocks = markdown_to_blocks("")
+        self.assertEqual(blocks, [])
+
+    def test_only_newlines(self):
+        blocks = markdown_to_blocks("\n\n\n\n")
+        self.assertEqual(blocks, [])
+
+    def test_multiple_blank_lines_between_blocks(self):
+        blocks = markdown_to_blocks("block one\n\n\n\nblock two")
+        self.assertEqual(blocks, ["block one", "block two"])
+
+    def test_preserves_internal_newlines(self):
+        blocks = markdown_to_blocks("line one\nline two\n\nline three")
+        self.assertEqual(blocks, ["line one\nline two", "line three"])
+
 
 if __name__ == "__main__":
     unittest.main()
