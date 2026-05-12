@@ -69,6 +69,24 @@ class TestBlockToBlockType(unittest.TestCase):
         block_type = block_to_block_type("1. item one\nitem two missing\n3. item three")
         self.assertEqual(block_type, BlockType.PARAGRAPH)
 
+    def test_ordered_list_non_sequential_is_paragraph(self):
+        # numbers must be sequential starting from 1
+        block_type = block_to_block_type("1. item one\n5. item two\n3. item three")
+        self.assertEqual(block_type, BlockType.PARAGRAPH)
+
+    def test_code_block_single_fence_is_paragraph(self):
+        # a single ``` line alone should not be a code block
+        block_type = block_to_block_type("```")
+        self.assertEqual(block_type, BlockType.PARAGRAPH)
+
+    def test_quote_mixed_lines_is_paragraph(self):
+        block_type = block_to_block_type(">valid quote\nnot a quote line\n>another")
+        self.assertEqual(block_type, BlockType.PARAGRAPH)
+
+    def test_unordered_list_mixed_lines_is_paragraph(self):
+        block_type = block_to_block_type("- item one\nitem two missing marker\n- item three")
+        self.assertEqual(block_type, BlockType.PARAGRAPH)
+
 
 if __name__ == "__main__":
     unittest.main()

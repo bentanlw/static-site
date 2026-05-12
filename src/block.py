@@ -10,26 +10,33 @@ class BlockType(Enum):
     ORDERED_LIST = "ordered_list"
 
 def block_to_block_type(markdown):
-    # headings
-    match = re.search(r"(^\#{1,6})( )(.+)", markdown)
-    if match:
+    # split block into lines
+    block_lines = markdown.split("\n")
+    # heading should start with the 1-6 # followed by a space
+    if re.search(r"(^#{1,6})( )(.+)", markdown):
         return BlockType.HEADING
-    # multi-line code blocks
-    match = re.search(r"(^```\n)(.*?)(\n```$)", markdown)
-    if match:
+    # code block should have more than one line, and start and end with ```
+    if len(block_lines) > 1 and block_lines[0].startswith("```") and block_lines[-1].startswith("```"):
         return BlockType.CODE
-    # quote block
-    markdown_lines = markdown.splitlines()
-    is_quote = all(re.search(r"^>", line) for line in markdown_lines)
-    if is_quote:
+    # quote block should have > at start of every line
+    if markdown.startswith(">"):
+        for line in block_lines:
+            if not line.startswith(">"):
+                return BlockType.PARAGRAPH
         return BlockType.QUOTE
-    # unordered list
-    is_unordered_list = all(re.search(r"(^-\s)", line) for line in markdown_lines)
-    if is_unordered_list:
+    # unordered list should start with - at every line, followed by a space
+    if markdown.startswith("- "):
+        for line in block_lines:
+            if not line.startswith("- "):
+                return BlockType.PARAGRAPH
         return BlockType.UNORDERED_LIST
-    # ordered list
-    is_ordered_list = all(re.search(r"(^\d+\.\s)", line) for line in markdown_lines)
-    if is_ordered_list:
+    # ordered list has to have sequential numbering and a period after the number, and a space after that
+    if markdown.startswith("1. "):
+        i = 1
+        for line in block_lines:
+            if not line.startswith(f"{i}. "):
+                   return BlockType.PARAGRAPH
+            i += 1
         return BlockType.ORDERED_LIST
-    # default case: paragraph
+    # if none of the above fit, then paragraph
     return BlockType.PARAGRAPH
