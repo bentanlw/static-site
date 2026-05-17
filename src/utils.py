@@ -168,7 +168,7 @@ def extract_title(markdown):
         raise Exception("No h1 heading found!")
     return heading.group(1)
 
-def generate_page(from_path, template_path, dest_path):
+def generate_page(from_path, template_path, dest_path, docs_root):
     print(f"Generating page from '{from_path}' to '{dest_path}' using '{template_path}'")
     with open(from_path, 'r') as f:
         from_file = f.read()
@@ -176,21 +176,23 @@ def generate_page(from_path, template_path, dest_path):
         template_file = f.read()
     html_content = markdown_to_html_node(from_file).to_html()
     from_title = extract_title(from_file)
+    output_file = Path(dest_path).resolve()
+    depth = len(output_file.parent.relative_to(Path(docs_root).resolve()).parts)
+    prefix = "/".join([".."] * depth) if depth > 0 else "."
     template_file = template_file.replace("{{ Title }}", from_title)
     template_file = template_file.replace("{{ Content }}", html_content)
-    template_file = template_file.replace("href=\"/", f"href=\"{template_path.parent}/")
-    template_file = template_file.replace("src=\"/", f"src=\"{template_path.parent}/")
-    output_file = Path(dest_path).resolve()
+    template_file = template_file.replace("href=\"/", f"href=\"{prefix}/")
+    template_file = template_file.replace("src=\"/", f"src=\"{prefix}/")
     output_file.parent.mkdir(exist_ok=True, parents=True)
     with open(output_file, 'w') as f:
         f.write(template_file)
     return
 
-def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path, docs_root):
     for item in dir_path_content.iterdir():
         if item.is_file() and item.suffix == ".md":
             dest_path = dest_dir_path/item.with_suffix(".html").name
-            generate_page(item, template_path, dest_path)
+            generate_page(item, template_path, dest_path, docs_root)
         elif item.is_dir():
-            generate_pages_recursive(item, template_path, dest_dir_path/item.name)
+            generate_pages_recursive(item, template_path, dest_dir_path/item.name, docs_root)
 

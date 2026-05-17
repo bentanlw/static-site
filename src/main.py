@@ -31,7 +31,7 @@ def main():
     destination_dir.mkdir(parents=True)
 
     copy_recursively(source_dir, destination_dir)
-    generate_pages_recursive(content_dir, template_path, destination_dir)
+    generate_pages_recursive(content_dir, template_path, destination_dir, destination_dir)
 
 
 if __name__ == "__main__":
