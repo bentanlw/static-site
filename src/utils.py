@@ -1,5 +1,8 @@
+from block import BlockType, block_to_block_type
+from parentnode import ParentNode
 from textnode import TextType, TextNode
 from leafnode import LeafNode
+from pathlib import Path
 import re
 
 def text_node_to_html_node(text_node):
@@ -102,6 +105,13 @@ def text_to_textnodes(text):
     new_nodes = split_nodes_delimiter(new_nodes, "_", TextType.ITALIC)
     return new_nodes
 
+def text_to_children(text):
+    textnodes_list = text_to_textnodes(text)
+    leafnodes_list = []
+    for textnode in textnodes_list:
+        leafnodes_list.append(text_node_to_html_node(textnode))
+    return leafnodes_list
+
 def markdown_to_blocks(markdown):
     blocks = []
     for block in markdown.split("\n\n"):
@@ -111,4 +121,74 @@ def markdown_to_blocks(markdown):
             blocks.append(block.strip())
     return blocks
 
+def block_to_html_node(block, block_type):
+    match block_type:
+        case BlockType.PARAGRAPH:
+            child_nodes = text_to_children(block.replace("\n", " "))
+            return ParentNode("p", child_nodes)
+        case BlockType.HEADING:
+            # determine heading type based on number of #
+            heading = re.search(r"(^#{1,6}) (.+)", block)
+            tag = f"h{len(heading.group(1))}"
+            child_nodes = text_to_children(heading.group(2))
+            return ParentNode(tag, child_nodes)
+        case BlockType.CODE:
+            code = LeafNode("code", block.replace("```", "").strip())
+            return ParentNode("pre", [code])
+        case BlockType.QUOTE:
+            child_nodes = text_to_children(block.replace(">", "").strip())
+            return ParentNode("blockquote", child_nodes)
+        case BlockType.UNORDERED_LIST:
+            grandchild_block = block.split("- ")
+            children = []
+            for grandchild in grandchild_block:
+                if len(grandchild) == 0:
+                    continue
+                children.append(ParentNode("li", text_to_children(grandchild.strip())))
+            return ParentNode("ul", children)
+        case BlockType.ORDERED_LIST:
+            grandchild_block = block.splitlines()
+            children = []
+            for grandchild in grandchild_block:
+                text =  re.search(r"^\d+. (.*)", grandchild)
+                children.append(ParentNode("li", text_to_children(text.group(1).strip())))
+            return ParentNode("ol", children)
+
+def markdown_to_html_node(markdown):
+    blocks = markdown_to_blocks(markdown)
+    blocks_list = []
+    for block in blocks:
+        block_type = block_to_block_type(block)
+        blocks_list.append(block_to_html_node(block, block_type))
+    return ParentNode("div", blocks_list)
+
+def extract_title(markdown):
+    heading = re.search(r"^#{1} (.+)", markdown)
+    if not heading:
+        raise Exception("No h1 heading found!")
+    return heading.group(1)
+
+def generate_page(from_path, template_path, dest_path):
+    print(f"Generating page from '{from_path}' to '{dest_path}' using '{template_path}'")
+    with open(from_path, 'r') as f:
+        from_file = f.read()
+    with open(template_path, 'r') as f:
+        template_file = f.read()
+    html_content = markdown_to_html_node(from_file).to_html()
+    from_title = extract_title(from_file)
+    template_file = template_file.replace("{{ Title }}", from_title)
+    template_file = template_file.replace("{{ Content }}", html_content)
+    output_file = Path(dest_path).resolve()
+    output_file.parent.mkdir(exist_ok=True, parents=True)
+    with open(output_file, 'w') as f:
+        f.write(template_file)
+    return
+
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+    for item in dir_path_content.iterdir():
+        if item.is_file() and item.suffix == ".md":
+            dest_path = dest_dir_path/item.with_suffix(".html").name
+            generate_page(item, template_path, dest_path)
+        elif item.is_dir():
+            generate_pages_recursive(item, template_path, dest_dir_path/item.name)
 

@@ -1,7 +1,8 @@
 import unittest
+from pathlib import Path
 
 from textnode import TextNode, TextType
-from utils import extract_markdown_images, extract_markdown_links, markdown_to_blocks, split_nodes_image, split_nodes_link, text_node_to_html_node, split_nodes_delimiter, text_to_textnodes
+from utils import extract_markdown_images, extract_markdown_links, extract_title, generate_page, markdown_to_blocks, markdown_to_html_node, split_nodes_image, split_nodes_link, text_node_to_html_node, split_nodes_delimiter, text_to_textnodes
 
 class TestTextNodeToHtmlNode(unittest.TestCase):
     def test_text(self):
@@ -367,6 +368,104 @@ This is the same paragraph on a new line
     def test_preserves_internal_newlines(self):
         blocks = markdown_to_blocks("line one\nline two\n\nline three")
         self.assertEqual(blocks, ["line one\nline two", "line three"])
+
+    def test_paragraphs(self):
+        md = """
+This is **bolded** paragraph
+text in a p
+tag here
+
+This is another paragraph with _italic_ text and `code` here
+
+"""
+
+        node = markdown_to_html_node(md)
+        html = node.to_html()
+        self.assertEqual(
+            html,
+            "<div><p>This is <b>bolded</b> paragraph text in a p tag here</p><p>This is another paragraph with <i>italic</i> text and <code>code</code> here</p></div>",
+            )
+
+    def test_codeblock(self):
+        md = """
+```
+This is text that _should_ remain
+the **same** even with inline stuff
+```
+"""
+
+        node = markdown_to_html_node(md)
+        html = node.to_html()
+        self.assertEqual(
+            html,
+            "<div><pre><code>This is text that _should_ remain\nthe **same** even with inline stuff</code></pre></div>",
+        )
+
+    def test_heading(self):
+        node = markdown_to_html_node("# Heading one")
+        self.assertEqual(node.to_html(), "<div><h1>Heading one</h1></div>")
+
+    def test_heading_levels(self):
+        node = markdown_to_html_node("## Heading two\n\n### Heading three")
+        self.assertEqual(node.to_html(), "<div><h2>Heading two</h2><h3>Heading three</h3></div>")
+
+    def test_heading_with_inline(self):
+        node = markdown_to_html_node("## Heading with **bold**")
+        self.assertEqual(node.to_html(), "<div><h2>Heading with <b>bold</b></h2></div>")
+
+    def test_quote(self):
+        node = markdown_to_html_node(">This is a quote\n>spanning multiple lines")
+        self.assertEqual(node.to_html(), "<div><blockquote>This is a quote\nspanning multiple lines</blockquote></div>")
+
+    def test_quote_with_inline(self):
+        node = markdown_to_html_node(">A quote with **bold** text")
+        self.assertEqual(node.to_html(), "<div><blockquote>A quote with <b>bold</b> text</blockquote></div>")
+
+    def test_unordered_list(self):
+        node = markdown_to_html_node("- item one\n- item two\n- item three")
+        self.assertEqual(node.to_html(), "<div><ul><li>item one</li><li>item two</li><li>item three</li></ul></div>")
+
+    def test_unordered_list_with_inline(self):
+        node = markdown_to_html_node("- item with **bold**\n- item with _italic_")
+        self.assertEqual(node.to_html(), "<div><ul><li>item with <b>bold</b></li><li>item with <i>italic</i></li></ul></div>")
+
+    def test_ordered_list(self):
+        node = markdown_to_html_node("1. first\n2. second\n3. third")
+        self.assertEqual(node.to_html(), "<div><ol><li>first</li><li>second</li><li>third</li></ol></div>")
+
+    def test_ordered_list_with_inline(self):
+        node = markdown_to_html_node("1. item with `code`\n2. item with **bold**")
+        self.assertEqual(node.to_html(), "<div><ol><li>item with <code>code</code></li><li>item with <b>bold</b></li></ol></div>")
+
+
+class TestExtractTitle(unittest.TestCase):
+    def test_simple_title(self):
+        self.assertEqual(extract_title("# Hello"), "Hello")
+
+    def test_title_with_multiple_words(self):
+        self.assertEqual(extract_title("# My Great Page"), "My Great Page")
+
+    def test_no_h1_raises(self):
+        with self.assertRaises(Exception):
+            extract_title("## Not an h1")
+
+    def test_no_heading_raises(self):
+        with self.assertRaises(Exception):
+            extract_title("just some text")
+
+    def test_h1_in_markdown_document(self):
+        md = "# The Title\n\nSome paragraph text."
+        self.assertEqual(extract_title(md), "The Title")
+
+
+class TestGeneratePage(unittest.TestCase):
+    def test_generate_page_placeholder(self):
+        repo_root = Path(__file__).parent.parent
+        from_path = repo_root / "content/index.md"
+        template_path = repo_root / "template.html"
+        dest_path = repo_root / "public/index.html"
+        # placeholder: just verify generate_page runs without raising
+        generate_page(str(from_path), str(template_path), str(dest_path))
 
 
 if __name__ == "__main__":
