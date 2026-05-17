@@ -1,1 +1,1 @@
-python3 src/main.py "/static-site/"
+python3 src/main.py "$(dirname "$0")"
