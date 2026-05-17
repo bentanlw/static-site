@@ -178,6 +178,8 @@ def generate_page(from_path, template_path, dest_path):
     from_title = extract_title(from_file)
     template_file = template_file.replace("{{ Title }}", from_title)
     template_file = template_file.replace("{{ Content }}", html_content)
+    template_file = template_file.replace("href=\"/", f"href=\"{from_path.parent}")
+    template_file = template_file.replace("src=\"/", f"src=\"{from_path.parent}")
     output_file = Path(dest_path).resolve()
     output_file.parent.mkdir(exist_ok=True, parents=True)
     with open(output_file, 'w') as f:
